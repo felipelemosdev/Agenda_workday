@@ -331,14 +331,24 @@ export const TarefasView: React.FC<TarefasViewProps> = ({
                 <select
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  disabled={clients.length === 0}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:opacity-60"
                 >
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.benefitType})
-                    </option>
-                  ))}
+                  {clients.length === 0 ? (
+                    <option value="">Nenhum cliente cadastrado</option>
+                  ) : (
+                    clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.benefitType})
+                      </option>
+                    ))
+                  )}
                 </select>
+                {clients.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    Cadastre um cliente primeiro para poder vincular tarefas a ele.
+                  </p>
+                )}
               </div>
 
               <div>

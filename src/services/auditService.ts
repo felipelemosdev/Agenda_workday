@@ -34,89 +34,20 @@ import { AuditLog, AuditAction, AuditEntity } from '../types';
 const AUDIT_STORAGE_KEY = 'workday_audit_logs';
 
 /**
- * Logs iniciais demonstrativos baseados nos exemplos solicitados
+ * Logs iniciais vazios para ambiente limpo e livre
  */
-export const INITIAL_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 'log_001',
-    userId: 'u_felipe',
-    userName: 'Felipe Lemos',
-    userRole: 'advogado',
-    action: 'LOGIN',
-    entity: 'SYSTEM',
-    description: 'Felipe Lemos realizou login no sistema.',
-    timestamp: '2026-09-14T07:30:12.000Z',
-    metadata: { ip: '189.26.110.42', userAgent: 'Chrome/128 MacOS' },
-  },
-  {
-    id: 'log_002',
-    userId: 'u_felipe',
-    userName: 'Felipe Lemos',
-    userRole: 'advogado',
-    action: 'CREATE',
-    entity: 'CLIENT',
-    entityId: 'c_joao_silva',
-    entityName: 'João da Silva',
-    description: 'Felipe Lemos cadastrou o cliente João da Silva.',
-    timestamp: '2026-09-14T07:45:00.000Z',
-    metadata: { benefitType: 'BPC/LOAS', channel: 'Presencial' },
-  },
-  {
-    id: 'log_003',
-    userId: 'u_felipe',
-    userName: 'Felipe Lemos',
-    userRole: 'advogado',
-    action: 'STATUS_CHANGE',
-    entity: 'CLIENT',
-    entityId: 'c_joao_silva',
-    entityName: 'João da Silva',
-    description: "Felipe Lemos alterou o status do cliente João da Silva de 'Aguardando Documentos' para 'Processo Ativo'.",
-    oldValue: 'Aguardando Documentos',
-    newValue: 'Processo Ativo',
-    timestamp: '2026-09-14T08:05:22.000Z',
-    metadata: { field: 'status' },
-  },
-  {
-    id: 'log_004',
-    userId: 'u_ana_carolina',
-    userName: 'Ana Carolina',
-    userRole: 'advogada',
-    action: 'CREATE',
-    entity: 'PROCEEDING',
-    entityId: 'proc_0001234',
-    entityName: 'Andamento processual',
-    description: 'Ana Carolina adicionou um andamento ao processo 0001234-56.2026.8.19.0001.',
-    timestamp: '2026-09-14T08:14:40.000Z',
-    metadata: { caseNumber: '0001234-56.2026.8.19.0001', court: 'TRF2 - 1ª Vara Previdenciária' },
-  },
-  {
-    id: 'log_005',
-    userId: 'u_isabelle',
-    userName: 'Isabelle Nascimento',
-    userRole: 'secretaria',
-    action: 'CREATE',
-    entity: 'TASK',
-    entityId: 'task_cadunico',
-    entityName: 'Nova tarefa',
-    description: 'Isabelle Nascimento criou uma nova tarefa.',
-    timestamp: '2026-09-14T08:20:15.000Z',
-    metadata: { taskTitle: 'Cobrar folha resumo do CadÚnico da cliente Maria', priority: 'Urgente' },
-  },
-  {
-    id: 'log_006',
-    userId: 'u_felipe',
-    userName: 'Felipe Lemos',
-    userRole: 'advogado',
-    action: 'DELETE',
-    entity: 'DOCUMENT',
-    entityId: 'doc_old_391',
-    entityName: 'Comprovante_antigo.pdf',
-    description: 'Felipe Lemos excluiu um documento.',
-    oldValue: 'Comprovante_antigo.pdf (substituído por versão autenticada)',
-    timestamp: '2026-09-14T08:26:02.000Z',
-    metadata: { clientId: 'c_adriana', reason: 'Documento duplicado' },
-  },
-];
+export const INITIAL_AUDIT_LOGS: AuditLog[] = [];
+
+/**
+ * Limpa todos os logs de auditoria
+ */
+export function clearAllAuditLogs(): void {
+  try {
+    localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify([]));
+  } catch (error) {
+    console.error('Erro ao limpar logs:', error);
+  }
+}
 
 /**
  * Recupera todos os logs de auditoria armazenados localmente
@@ -126,14 +57,14 @@ export function getStoredAuditLogs(): AuditLog[] {
     const data = localStorage.getItem(AUDIT_STORAGE_KEY);
     if (data) {
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (error) {
     console.error('Erro ao ler logs de auditoria:', error);
   }
-  return INITIAL_AUDIT_LOGS;
+  return [];
 }
 
 /**

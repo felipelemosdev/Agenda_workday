@@ -120,17 +120,28 @@ export const NovoAgendamentoModal: React.FC<NovoAgendamentoModalProps> = ({
             <label className="block text-xs font-semibold text-[#191c1e] mb-1">
               Vincular a Cliente *
             </label>
-            <select
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-[#f7f9fb] border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#D97706] focus:outline-none"
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name} ({c.benefitType})
-                </option>
-              ))}
-            </select>
+            {clients.length > 0 ? (
+              <select
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[#f7f9fb] border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#D97706] focus:outline-none"
+              >
+                <option value="">Selecione um cliente cadastrado...</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name} ({c.benefitType})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Ex: Nome do cliente ou interessado"
+                className="w-full px-3 py-2 text-sm bg-[#f7f9fb] border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#D97706] focus:outline-none"
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

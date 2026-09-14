@@ -41,7 +41,7 @@ import { DetalhesProcessoModal } from './components/modals/DetalhesProcessoModal
 import { NotificacoesDrawer } from './components/modals/NotificacoesDrawer';
 import { PerfilModal } from './components/modals/PerfilModal';
 import { ChatModal } from './components/modals/ChatModal';
-import { getStoredAuditLogs, createAuditLog } from './services/auditService';
+import { getStoredAuditLogs, createAuditLog, clearAllAuditLogs } from './services/auditService';
 
 export default function App() {
   // Authentication state - defaults to Felipe Lemos (as seen in screenshot)
@@ -104,33 +104,83 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  // Data states with localStorage initialization
+  // Data states starting completely clean and free
   const [clients, setClients] = useState<Client[]>(() => {
+    const isClean = localStorage.getItem('workday_clean_slate_active_v2');
+    if (!isClean) {
+      localStorage.removeItem('workday_clients');
+      localStorage.removeItem('workday_activities');
+      localStorage.removeItem('workday_cases');
+      localStorage.removeItem('workday_inss_reqs');
+      localStorage.removeItem('workday_notifications');
+      localStorage.removeItem('workday_reminders');
+      localStorage.removeItem('workday_audit_logs');
+      localStorage.setItem('workday_clean_slate_active_v2', 'true');
+      return [];
+    }
     const saved = localStorage.getItem('workday_clients');
-    return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (c: any) =>
+            c.id !== 'c-adriana' && c.id !== 'c-carlos' && c.id !== 'c-maria'
+        );
+      }
+    } catch {}
+    return [];
   });
 
   const [activities, setActivities] = useState<Activity[]>(() => {
     const saved = localStorage.getItem('workday_activities');
-    return saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((a: any) => !['act1', 'act2', 'act3', 'act4'].includes(a.id));
+      }
+    } catch {}
+    return [];
   });
 
   const [cases, setCases] = useState<LawCase[]>(() => {
     const saved = localStorage.getItem('workday_cases');
-    return saved ? JSON.parse(saved) : INITIAL_CASES;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((c: any) => !['case1', 'case2', 'case3', 'case4'].includes(c.id));
+      }
+    } catch {}
+    return [];
   });
 
   const [inssRequirements, setInssRequirements] = useState<InssRequirement[]>(() => {
     const saved = localStorage.getItem('workday_inss_reqs');
-    return saved ? JSON.parse(saved) : INITIAL_INSS_REQUIREMENTS;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((r: any) => !['inss1', 'inss2', 'inss3'].includes(r.id));
+      }
+    } catch {}
+    return [];
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem('workday_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((n: any) => !['n1', 'n2', 'n3', 'n4'].includes(n.id));
+      }
+    } catch {}
+    return [];
   });
 
-  // Reminders state: empty by default to display "Sem lembretes pendentes. 🎉"
+  // Reminders state: empty by default
   const [reminders, setReminders] = useState<ReminderItem[]>(() => {
     const saved = localStorage.getItem('workday_reminders');
     return saved ? JSON.parse(saved) : [];
@@ -527,6 +577,31 @@ export default function App() {
     );
   };
 
+  const handleClearAuditLogs = () => {
+    clearAllAuditLogs();
+    setAuditLogs([]);
+    showToast('Logs de auditoria limpos com sucesso.');
+  };
+
+  const handleClearAllData = () => {
+    setClients([]);
+    setActivities([]);
+    setCases([]);
+    setInssRequirements([]);
+    setNotifications([]);
+    setReminders([]);
+    clearAllAuditLogs();
+    setAuditLogs([]);
+    localStorage.removeItem('workday_clients');
+    localStorage.removeItem('workday_activities');
+    localStorage.removeItem('workday_cases');
+    localStorage.removeItem('workday_inss_reqs');
+    localStorage.removeItem('workday_notifications');
+    localStorage.removeItem('workday_reminders');
+    localStorage.removeItem('workday_audit_logs');
+    showToast('Todos os dados foram limpos. Sistema 100% livre!');
+  };
+
   // If not authenticated, render LoginScreen
   if (!currentUser) {
     return (
@@ -647,6 +722,8 @@ export default function App() {
           <AuditoriaView
             logs={auditLogs}
             onRefresh={() => setAuditLogs(getStoredAuditLogs())}
+            onClearLogs={handleClearAuditLogs}
+            onClearAllSystemData={handleClearAllData}
             onNavigateBack={() => setActiveTab('inicio')}
           />
         )}
@@ -699,6 +776,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         onSetTheme={handleSetTheme}
         onOpenAuditoria={() => setActiveTab('auditoria')}
+        onClearAllData={handleClearAllData}
       />
 
       <ChatModal

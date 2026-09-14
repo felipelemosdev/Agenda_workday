@@ -26,12 +26,16 @@ import { exportAuditLogsCSV, exportAuditLogsJSON } from '../services/auditServic
 interface AuditoriaViewProps {
   logs: AuditLog[];
   onRefresh?: () => void;
+  onClearLogs?: () => void;
+  onClearAllSystemData?: () => void;
   onNavigateBack?: () => void;
 }
 
 export const AuditoriaView: React.FC<AuditoriaViewProps> = ({
   logs,
   onRefresh,
+  onClearLogs,
+  onClearAllSystemData,
   onNavigateBack,
 }) => {
   // Filters state
@@ -290,6 +294,36 @@ export const AuditoriaView: React.FC<AuditoriaViewProps> = ({
             <Database className="w-3.5 h-3.5 text-amber-500" />
             <span>JSON</span>
           </button>
+
+          {onClearLogs && logs.length > 0 && (
+            <button
+              onClick={() => {
+                if (window.confirm('Deseja limpar todos os registros de auditoria?')) {
+                  onClearLogs();
+                }
+              }}
+              title="Limpar logs de auditoria"
+              className="inline-flex items-center gap-1 px-2.5 py-2 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/50 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Limpar Logs</span>
+            </button>
+          )}
+
+          {onClearAllSystemData && (
+            <button
+              onClick={() => {
+                if (window.confirm('Deseja zerar e limpar todos os dados do sistema (clientes, tarefas, processos, agendamentos) e deixar tudo livre?')) {
+                  onClearAllSystemData();
+                }
+              }}
+              title="Limpar todos os dados e deixar tudo livre"
+              className="inline-flex items-center gap-1 px-2.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Zerar Dados</span>
+            </button>
+          )}
         </div>
       </div>
 

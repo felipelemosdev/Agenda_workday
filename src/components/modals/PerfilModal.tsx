@@ -24,6 +24,7 @@ interface PerfilModalProps {
   isDarkMode?: boolean;
   onSetTheme?: (dark: boolean) => void;
   onOpenAuditoria?: () => void;
+  onClearAllData?: () => void;
 }
 
 export const PerfilModal: React.FC<PerfilModalProps> = ({
@@ -35,6 +36,7 @@ export const PerfilModal: React.FC<PerfilModalProps> = ({
   isDarkMode = false,
   onSetTheme,
   onOpenAuditoria,
+  onClearAllData,
 }) => {
   const [name, setName] = useState(currentUser.name);
   const [newPassword, setNewPassword] = useState('');
@@ -179,6 +181,28 @@ export const PerfilModal: React.FC<PerfilModalProps> = ({
               className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
             >
               Acessar
+            </button>
+          </div>
+        )}
+
+        {/* Zerar Dados do Sistema */}
+        {onClearAllData && (
+          <div className="p-3 bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-red-900 dark:text-red-300">Zerar Todos os Dados</p>
+              <p className="text-[11px] text-red-700/80 dark:text-red-400">Limpar exemplos e deixar o sistema livre</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Tem certeza que deseja zerar todos os dados e deixar o sistema totalmente livre?')) {
+                  onClearAllData();
+                  onClose();
+                }
+              }}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
+            >
+              Zerar Dados
             </button>
           </div>
         )}

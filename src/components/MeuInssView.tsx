@@ -131,7 +131,18 @@ export const MeuInssView: React.FC<MeuInssViewProps> = ({
           </div>
 
           <div className="space-y-3">
-            {requirements.map((req) => {
+            {requirements.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center border border-[#E2E8F0] space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto opacity-80" />
+                <p className="text-sm font-semibold text-[#191c1e]">
+                  Nenhuma exigência do Meu INSS pendente
+                </p>
+                <p className="text-xs text-[#75777d]">
+                  Todos os requerimentos administrativos estão em conformidade e sem pendências no momento.
+                </p>
+              </div>
+            ) : (
+              requirements.map((req) => {
               const isResolved = req.status === 'Respondida';
 
               return (
@@ -196,7 +207,7 @@ export const MeuInssView: React.FC<MeuInssViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       )}
