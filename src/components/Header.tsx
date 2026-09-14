@@ -9,7 +9,9 @@ import {
   LogOut,
   User,
   ExternalLink,
-  ChevronDown,
+  ShieldCheck,
+  Check,
+  Settings,
 } from 'lucide-react';
 import { AppUser, NotificationItem, TabType, Client } from '../types';
 
@@ -25,7 +27,7 @@ interface HeaderProps {
   onSelectClient?: (client: Client) => void;
   onOpenChat: () => void;
   isDarkMode: boolean;
-  onToggleDarkMode: () => void;
+  onSetTheme: (dark: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,24 +42,30 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectClient,
   onOpenChat,
   isDarkMode,
-  onToggleDarkMode,
+  onSetTheme,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const themeMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Filter clients for quick search dropdown
   const matchedClients = searchQuery.trim()
-    ? clients.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.cpf.includes(searchQuery) ||
-          (c.benefitType && c.benefitType.toLowerCase().includes(searchQuery.toLowerCase()))
-      ).slice(0, 5)
+    ? clients
+        .filter(
+          (c) =>
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.cpf.includes(searchQuery) ||
+            (c.benefitType &&
+              c.benefitType.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .slice(0, 5)
     : [];
 
   useEffect(() => {
@@ -65,20 +73,30 @@ export const Header: React.FC<HeaderProps> = ({
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setIsSearchOpen(false);
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
         setIsUserMenuOpen(false);
+      }
+      if (
+        themeMenuRef.current &&
+        !themeMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsThemeMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navTabs = [
-    { id: 'inicio' as TabType, label: 'INÍCIO' },
-    { id: 'agenda' as TabType, label: 'AGENDA' },
-    { id: 'clientes' as TabType, label: 'CLIENTES' },
-    { id: 'tarefas' as TabType, label: 'TAREFAS' },
-    { id: 'processos' as TabType, label: 'PROCESSOS' },
+  const navTabs: { id: TabType; label: string }[] = [
+    { id: 'inicio', label: 'INÍCIO' },
+    { id: 'agenda', label: 'AGENDA' },
+    { id: 'clientes', label: 'CLIENTES' },
+    { id: 'tarefas', label: 'TAREFAS' },
+    { id: 'processos', label: 'PROCESSOS' },
+    { id: 'auditoria', label: 'AUDITORIA' },
   ];
 
   // User initials: "FL" for Felipe Lemos
@@ -118,19 +136,22 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`px-4 py-2 text-xs md:text-sm font-bold tracking-wide transition-all cursor-pointer rounded-t-lg relative ${
+                className={`px-3.5 py-2 text-xs md:text-sm font-bold tracking-wide transition-all cursor-pointer rounded-t-lg relative flex items-center gap-1.5 ${
                   isActive
                     ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 border-b-2 border-b-amber-500 shadow-2xs -mb-[1px]'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-slate-800/70'
                 }`}
               >
-                {tab.label}
+                {tab.id === 'auditoria' && (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                )}
+                <span>{tab.label}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* Right Actions: Search, Chat, Dark Mode, Bell, User Avatar */}
+        {/* Right Actions: Search, Chat, Theme Menu, Bell, User Avatar */}
         <div className="flex items-center gap-1.5 md:gap-2">
           {/* Quick Client Search */}
           <div ref={searchRef} className="relative hidden sm:block">
@@ -145,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsSearchOpen(true);
                 }}
                 placeholder="Buscar clientes..."
-                className="w-44 md:w-60 pl-9 pr-3 py-1.5 text-xs md:text-sm bg-gray-100/80 dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-gray-400"
+                className="w-40 md:w-56 pl-9 pr-3 py-1.5 text-xs md:text-sm bg-gray-100/80 dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-gray-400"
               />
             </div>
 
@@ -193,19 +214,72 @@ export const Header: React.FC<HeaderProps> = ({
             <MessageCircle className="w-4 h-4 md:w-4.5 md:h-4.5" />
           </button>
 
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={onToggleDarkMode}
-            title={isDarkMode ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'}
-            aria-label="Alternar tema"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            {isDarkMode ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-gray-600" />
+          {/* Opções de Tema: Claro / Escuro */}
+          <div ref={themeMenuRef} className="relative">
+            <button
+              onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
+              title={isDarkMode ? 'Tema Atual: Escuro' : 'Tema Atual: Claro'}
+              aria-label="Opções de Tema"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
+            >
+              {isDarkMode ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+
+            {/* Dropdown com opções explícitas de tema */}
+            {isThemeMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-2 z-50 space-y-1">
+                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-slate-700 mb-1">
+                  Opções de Tema
+                </div>
+
+                {/* Opção: Tema Claro */}
+                <button
+                  onClick={() => {
+                    onSetTheme(false);
+                    setIsThemeMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                    !isDarkMode
+                      ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-4 h-4 text-amber-500" />
+                    <span>Tema Claro</span>
+                  </div>
+                  {!isDarkMode && (
+                    <Check className="w-3.5 h-3.5 text-amber-600" />
+                  )}
+                </button>
+
+                {/* Opção: Tema Escuro */}
+                <button
+                  onClick={() => {
+                    onSetTheme(true);
+                    setIsThemeMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-4 h-4 text-indigo-500" />
+                    <span>Tema Escuro</span>
+                  </div>
+                  {isDarkMode && (
+                    <Check className="w-3.5 h-3.5 text-amber-600" />
+                  )}
+                </button>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Notifications Bell */}
           <button
@@ -222,7 +296,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
-          {/* User Avatar Circle (FL) */}
+          {/* User Avatar Circle (FL) with Configurações & Auditoria */}
           <div ref={userMenuRef} className="relative">
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -234,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* User Dropdown */}
             {isUserMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-2 z-50 space-y-1">
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-2 z-50 space-y-1">
                 <div className="px-3 py-2 border-b border-gray-100 dark:border-slate-700">
                   <p className="text-xs font-bold text-gray-900 dark:text-white">
                     {currentUser.name}
@@ -247,6 +321,18 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
 
+                {/* CONFIGURAÇÕES → AUDITORIA */}
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    onTabChange('auditoria');
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700 rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Configurações → Auditoria</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
@@ -258,16 +344,49 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Perfil & Senha</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    onLogout();
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl flex items-center gap-2 cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sair do Workday</span>
-                </button>
+                {/* Submenu Tema no perfil */}
+                <div className="px-3 py-2 border-t border-gray-100 dark:border-slate-700">
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1.5">
+                    Tema da Interface
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => onSetTheme(false)}
+                      className={`px-2 py-1 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                        !isDarkMode
+                          ? 'bg-[#091426] text-white'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      <Sun className="w-3 h-3 text-amber-400" />
+                      <span>Claro</span>
+                    </button>
+                    <button
+                      onClick={() => onSetTheme(true)}
+                      className={`px-2 py-1 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                        isDarkMode
+                          ? 'bg-[#091426] text-white'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      <Moon className="w-3 h-3 text-indigo-400" />
+                      <span>Escuro</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-1">
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sair do Workday</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -282,13 +401,16 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-lg transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-lg transition-all flex items-center gap-1 ${
                 isActive
                   ? 'bg-[#091426] text-white shadow-xs'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800'
               }`}
             >
-              {tab.label}
+              {tab.id === 'auditoria' && (
+                <ShieldCheck className="w-3 h-3 text-amber-400" />
+              )}
+              <span>{tab.label}</span>
             </button>
           );
         })}

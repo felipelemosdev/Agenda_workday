@@ -13,6 +13,9 @@ import {
   InssRequirement,
   AppUser,
   ReminderItem,
+  AuditLog,
+  AuditAction,
+  AuditEntity,
 } from './types';
 import {
   INITIAL_CLIENTS,
@@ -30,6 +33,7 @@ import { ProcessosView } from './components/ProcessosView';
 import { ClientesView } from './components/ClientesView';
 import { TarefasView } from './components/TarefasView';
 import { MeuInssView } from './components/MeuInssView';
+import { AuditoriaView } from './components/AuditoriaView';
 import { NovoClienteModal } from './components/modals/NovoClienteModal';
 import { NovoAgendamentoModal } from './components/modals/NovoAgendamentoModal';
 import { DetalhesAtividadeModal } from './components/modals/DetalhesAtividadeModal';
@@ -37,6 +41,7 @@ import { DetalhesProcessoModal } from './components/modals/DetalhesProcessoModal
 import { NotificacoesDrawer } from './components/modals/NotificacoesDrawer';
 import { PerfilModal } from './components/modals/PerfilModal';
 import { ChatModal } from './components/modals/ChatModal';
+import { getStoredAuditLogs, createAuditLog } from './services/auditService';
 
 export default function App() {
   // Authentication state - defaults to Felipe Lemos (as seen in screenshot)
@@ -77,13 +82,17 @@ export default function App() {
     };
   });
 
-  // Navigation: matches screenshot tabs
+  // Navigation: matches screenshot tabs + auditoria
   const [activeTab, setActiveTab] = useState<TabType>('inicio');
 
-  // Dark mode state
+  // Dark mode state with explicit theme control
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('workday_theme') === 'dark';
   });
+
+  const handleSetTheme = (dark: boolean) => {
+    setIsDarkMode(dark);
+  };
 
   useEffect(() => {
     if (isDarkMode) {
@@ -121,10 +130,15 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
   });
 
-  // Reminders state: empty by default to display "Sem lembretes pendentes. 🎉" like screenshot
+  // Reminders state: empty by default to display "Sem lembretes pendentes. 🎉"
   const [reminders, setReminders] = useState<ReminderItem[]>(() => {
     const saved = localStorage.getItem('workday_reminders');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  // Audit logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    return getStoredAuditLogs();
   });
 
   // Modal & focus states
@@ -145,6 +159,27 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  // Helper to record audit log events
+  const logEvent = (entry: {
+    action: AuditAction;
+    entity: AuditEntity;
+    entityId?: string;
+    entityName?: string;
+    description: string;
+    oldValue?: string | Record<string, any>;
+    newValue?: string | Record<string, any>;
+    metadata?: Record<string, any>;
+  }) => {
+    if (!currentUser) return;
+    const created = createAuditLog({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      ...entry,
+    });
+    setAuditLogs((prev) => [created, ...prev]);
   };
 
   // Persist states
@@ -187,10 +222,30 @@ export default function App() {
   // Auth Handlers
   const handleLoginSuccess = (user: AppUser) => {
     setCurrentUser(user);
+    createAuditLog({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'LOGIN',
+      entity: 'SYSTEM',
+      description: `${user.name} realizou login no sistema.`,
+    });
+    setAuditLogs(getStoredAuditLogs());
     showToast(`Bem-vindo ao Workday, ${user.name}!`);
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      createAuditLog({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'LOGOUT',
+        entity: 'SYSTEM',
+        description: `${currentUser.name} encerrou a sessão no sistema.`,
+      });
+      setAuditLogs(getStoredAuditLogs());
+    }
     setCurrentUser(null);
     setActiveTab('inicio');
     showToast('Sessão encerrada.');
@@ -201,13 +256,27 @@ export default function App() {
       ...prev,
       [username]: newPass,
     }));
+    logEvent({
+      action: 'UPDATE',
+      entity: 'USER',
+      entityName: username,
+      description: `${currentUser?.name} alterou a senha do usuário ${username}.`,
+    });
     showToast(`Senha do usuário "${username}" atualizada com sucesso!`);
   };
 
   const handleUpdateUserName = (newName: string) => {
     if (currentUser) {
+      const oldName = currentUser.name;
       const updatedUser = { ...currentUser, name: newName };
       setCurrentUser(updatedUser);
+      logEvent({
+        action: 'UPDATE',
+        entity: 'USER',
+        description: `${oldName} alterou o nome de exibição para '${newName}'.`,
+        oldValue: oldName,
+        newValue: newName,
+      });
       showToast(`Nome de exibição alterado para "${newName}".`);
     }
   };
@@ -220,30 +289,134 @@ export default function App() {
       done: false,
     };
     setReminders((prev) => [newRem, ...prev]);
+    logEvent({
+      action: 'CREATE',
+      entity: 'TASK',
+      entityName: title,
+      description: `${currentUser?.name} criou o lembrete '${title}'.`,
+    });
     showToast('Lembrete adicionado!');
   };
 
   const handleToggleReminder = (id: string) => {
+    const item = reminders.find((r) => r.id === id);
     setReminders((prev) =>
       prev.map((r) => (r.id === id ? { ...r, done: !r.done } : r))
     );
+    if (item) {
+      logEvent({
+        action: item.done ? 'UPDATE' : 'COMPLETE',
+        entity: 'TASK',
+        entityId: id,
+        entityName: item.title,
+        description: `${currentUser?.name} ${
+          item.done ? 'reabriu' : 'concluiu'
+        } o lembrete '${item.title}'.`,
+      });
+    }
   };
 
   const handleDeleteReminder = (id: string) => {
+    const item = reminders.find((r) => r.id === id);
     setReminders((prev) => prev.filter((r) => r.id !== id));
+    logEvent({
+      action: 'DELETE',
+      entity: 'TASK',
+      entityId: id,
+      entityName: item?.title,
+      description: `${currentUser?.name} excluiu um lembrete.`,
+    });
     showToast('Lembrete removido.');
   };
 
   // Business Handlers
   const handleAddClient = (newClient: Client) => {
     setClients((prev) => [newClient, ...prev]);
+    logEvent({
+      action: 'CREATE',
+      entity: 'CLIENT',
+      entityId: newClient.id,
+      entityName: newClient.name,
+      description: `${currentUser?.name} cadastrou o cliente ${newClient.name}.`,
+      newValue: {
+        name: newClient.name,
+        cpf: newClient.cpf,
+        benefitType: newClient.benefitType,
+      },
+    });
     showToast(`Cliente "${newClient.name}" cadastrado com sucesso!`);
   };
 
   const handleUpdateClient = (updatedClient: Client) => {
+    const oldClient = clients.find((c) => c.id === updatedClient.id);
+
     setClients((prev) =>
       prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
     );
+
+    // Identify specific audit action: status change, document deletion/addition, proceeding, task, or update
+    if (oldClient && oldClient.status !== updatedClient.status) {
+      logEvent({
+        action: 'STATUS_CHANGE',
+        entity: 'CLIENT',
+        entityId: updatedClient.id,
+        entityName: updatedClient.name,
+        description: `${currentUser?.name} alterou o status do cliente ${updatedClient.name} de '${oldClient.status}' para '${updatedClient.status}'.`,
+        oldValue: oldClient.status,
+        newValue: updatedClient.status,
+      });
+    } else if (
+      oldClient &&
+      (oldClient.documents?.length || 0) > (updatedClient.documents?.length || 0)
+    ) {
+      logEvent({
+        action: 'DELETE',
+        entity: 'DOCUMENT',
+        entityId: updatedClient.id,
+        entityName: updatedClient.name,
+        description: `${currentUser?.name} excluiu um documento.`,
+      });
+    } else if (
+      oldClient &&
+      (oldClient.documents?.length || 0) < (updatedClient.documents?.length || 0)
+    ) {
+      logEvent({
+        action: 'UPLOAD',
+        entity: 'DOCUMENT',
+        entityId: updatedClient.id,
+        entityName: updatedClient.name,
+        description: `${currentUser?.name} anexou um novo documento ao cliente ${updatedClient.name}.`,
+      });
+    } else if (
+      oldClient &&
+      (oldClient.proceedings?.length || 0) < (updatedClient.proceedings?.length || 0)
+    ) {
+      logEvent({
+        action: 'CREATE',
+        entity: 'PROCEEDING',
+        entityName: 'Andamento processual',
+        description: `${currentUser?.name} adicionou um andamento ao processo do cliente ${updatedClient.name}.`,
+      });
+    } else if (
+      oldClient &&
+      (oldClient.tasks?.length || 0) < (updatedClient.tasks?.length || 0)
+    ) {
+      logEvent({
+        action: 'CREATE',
+        entity: 'TASK',
+        entityName: 'Nova tarefa',
+        description: `${currentUser?.name} criou uma nova tarefa.`,
+      });
+    } else {
+      logEvent({
+        action: 'UPDATE',
+        entity: 'CLIENT',
+        entityId: updatedClient.id,
+        entityName: updatedClient.name,
+        description: `${currentUser?.name} atualizou os dados do cliente ${updatedClient.name}.`,
+      });
+    }
+
     showToast(`Ficha de "${updatedClient.name}" atualizada!`);
   };
 
@@ -254,24 +427,44 @@ export default function App() {
 
   const handleAddActivity = (newActivity: Activity) => {
     setActivities((prev) => [newActivity, ...prev]);
+    logEvent({
+      action: 'CREATE',
+      entity: 'APPOINTMENT',
+      entityId: newActivity.id,
+      entityName: newActivity.title,
+      description: `${currentUser?.name} agendou ${newActivity.title} para ${newActivity.clientName || 'cliente'}.`,
+      metadata: { date: newActivity.date, time: newActivity.time, type: newActivity.type },
+    });
     showToast(`Compromisso "${newActivity.title}" agendado na Agenda Eletrônica!`);
   };
 
   const handleToggleActivityComplete = (id: string) => {
+    const act = activities.find((a) => a.id === id);
     setActivities((prev) =>
-      prev.map((act) => {
-        if (act.id === id) {
-          const updated = !act.completed;
+      prev.map((a) => {
+        if (a.id === id) {
+          const updated = !a.completed;
           showToast(
             updated
-              ? `Compromisso "${act.title}" marcado como realizado!`
-              : `Compromisso "${act.title}" reaberto na agenda!`
+              ? `Compromisso "${a.title}" marcado como realizado!`
+              : `Compromisso "${a.title}" reaberto na agenda!`
           );
-          return { ...act, completed: updated };
+          return { ...a, completed: updated };
         }
-        return act;
+        return a;
       })
     );
+    if (act) {
+      logEvent({
+        action: act.completed ? 'UPDATE' : 'COMPLETE',
+        entity: 'APPOINTMENT',
+        entityId: act.id,
+        entityName: act.title,
+        description: `${currentUser?.name} ${
+          act.completed ? 'reabriu' : 'marcou como realizado'
+        } o compromisso '${act.title}'.`,
+      });
+    }
     if (selectedActivity && selectedActivity.id === id) {
       setSelectedActivity((prev) => (prev ? { ...prev, completed: !prev.completed } : null));
     }
@@ -289,6 +482,12 @@ export default function App() {
         return c;
       })
     );
+    logEvent({
+      action: 'UPDATE',
+      entity: 'CASE',
+      entityId: caseId,
+      description: `${currentUser?.name} atualizou um item de checklist no processo.`,
+    });
     if (selectedCase && selectedCase.id === caseId) {
       setSelectedCase((prev) => {
         if (!prev) return null;
@@ -308,6 +507,12 @@ export default function App() {
         req.id === id ? { ...req, status: 'Respondida' } : req
       )
     );
+    logEvent({
+      action: 'COMPLETE',
+      entity: 'INSS_REQUIREMENT',
+      entityId: id,
+      description: `${currentUser?.name} cumpriu exigência do Meu INSS com protocolo de juntada.`,
+    });
     showToast('Exigência cumprida! Protocolo de juntada emitido.');
   };
 
@@ -344,7 +549,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Header with integrated tabs, search, chat, dark mode, bell & user avatar */}
+      {/* Main Header with integrated tabs, search, chat, explicit theme options, bell & user avatar */}
       <Header
         currentUser={currentUser}
         activeTab={activeTab}
@@ -356,7 +561,7 @@ export default function App() {
         clients={clients}
         onOpenChat={() => setIsChatModalOpen(true)}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        onSetTheme={handleSetTheme}
       />
 
       {/* Main Content View Container */}
@@ -436,6 +641,15 @@ export default function App() {
             onResolveRequirement={handleResolveRequirement}
           />
         )}
+
+        {/* CONFIGURAÇÕES → AUDITORIA */}
+        {activeTab === 'auditoria' && (
+          <AuditoriaView
+            logs={auditLogs}
+            onRefresh={() => setAuditLogs(getStoredAuditLogs())}
+            onNavigateBack={() => setActiveTab('inicio')}
+          />
+        )}
       </main>
 
       {/* Modals & Drawers */}
@@ -482,6 +696,9 @@ export default function App() {
         currentUser={currentUser}
         onSaveName={handleUpdateUserName}
         onChangePassword={handleChangePassword}
+        isDarkMode={isDarkMode}
+        onSetTheme={handleSetTheme}
+        onOpenAuditoria={() => setActiveTab('auditoria')}
       />
 
       <ChatModal

@@ -744,9 +744,24 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                   </div>
                 </div>
 
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {doc.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {doc.status}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateClient({
+                        ...client,
+                        documents: (client.documents || []).filter((d) => d.id !== doc.id),
+                      });
+                    }}
+                    title="Excluir documento"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

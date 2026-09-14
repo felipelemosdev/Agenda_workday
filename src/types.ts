@@ -1,6 +1,47 @@
-export type TabType = 'inicio' | 'agenda' | 'clientes' | 'tarefas' | 'processos' | 'meu_inss';
+export type TabType = 'inicio' | 'agenda' | 'clientes' | 'tarefas' | 'processos' | 'meu_inss' | 'auditoria';
 
 export type UserRole = 'estagiario' | 'secretaria' | 'financeiro' | 'advogada' | 'advogado';
+
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'LOGIN'
+  | 'LOGOUT'
+  | 'VIEW'
+  | 'STATUS_CHANGE'
+  | 'UPLOAD'
+  | 'DOWNLOAD'
+  | 'COMPLETE'
+  | 'CANCEL';
+
+export type AuditEntity =
+  | 'CLIENT'
+  | 'APPOINTMENT'
+  | 'TASK'
+  | 'CASE'
+  | 'DOCUMENT'
+  | 'HISTORY'
+  | 'PROCEEDING'
+  | 'INSS_REQUIREMENT'
+  | 'USER'
+  | 'SYSTEM';
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: AuditAction;
+  entity: AuditEntity;
+  entityId?: string;
+  entityName?: string;
+  description: string;
+  oldValue?: string | Record<string, any>;
+  newValue?: string | Record<string, any>;
+  timestamp: string; // ISO 8601 string, e.g. "2026-09-14T08:35:00.000Z"
+  metadata?: Record<string, any>;
+}
 
 export interface ReminderItem {
   id: string;
