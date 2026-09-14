@@ -1,0 +1,6 @@
+{
+  "name": "Workday",
+  "description": "Sistema Workday de agenda eletrônica, gestão de clientes previdenciários, requerimentos do Meu INSS e processos judiciais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
